@@ -1,0 +1,172 @@
+      +--------------------+
+      |        CS 140      |
+      | PROJECT 1: THREADS |
+      |   DESIGN DOCUMENT  |
+      +--------------------+
+           
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+Dami Jung <dam2j@unist.ac.kr>
+
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+
+           ALARM CLOCK
+           ===========
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+struct thread
+{
+  ...
+  /* Arbitary Defined Variable */
+  int64_t sleeping_time;
+};
+>> Sleeping time of thread until it woke (i.e., removed from sleep_list then inserted into ready_list).
+
+static struct list sleep_list;
+>> List of sleeping threads. Sleeping rocesses are added to this list
+   when they sleep for given amount of time and removed when they need to woke up.
+
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe what happens in a call to timer_sleep(),
+>> including the effects of the timer interrupt handler.
+
+timer_sleep(int64_t ticks) takes ticks as a parameter and sleeps the thread from the current time (assuming ticks is the time) for TICKS time.
+When timer_sleep is called, it disables interrupts and stores the previous interrupt status in old_level.
+After setting the time the thread should be sleeping (current ticks + TICKS) in thread_current ()-> sleeping_time, the thread is pushed to the sleep list.
+Then, by calling thread_blocks () puts the current thread to sleep, and then enables interrupts.
+
+timer interrupt handler increases tick by one and call thread_tick().
+timer interrupt handler calls thread_tick (), which the thread_tick function is called every tick, thread_wakeup (int64_t) -Wakes up a thread whose sleeping time is up 
+from the time received as an argument, newly defined in this project.- is called here.
+
+>> A3: What steps are taken to minimize the amount of time spent in
+>> the timer interrupt handler?
+
+To minimize the amount of time spent in the timer interrupt handler, the threads in sleep_list are sorted in ascending order for sleeping_time.
+sleeping_less_func is implemented as a list_less_func for sorting the sleep_list (implemented by referring to list.h.).
+Threads that need to wake up first come to the front of the sort, reducing the time thread_tick() has to run, also results in minimizing time spent in timer interrupt handler
+
+
+---- RATIONALE ----
+
+>> A6: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+Existing designs run busy waits, so no idle threads are fired at all. However, the design implemented in this project (introduced in A1, A2, and A3) avoids busy wait through sleep_list and enables idle threads.
+Additionally, an effort was made to be efficient when sorting lists.
+For example, when sorting sleep_list in timer_sleep, instead of adding a new element to the right place after sorting (i.e., list_sort then list_insert_ordered), 
+I choose to first push a new element to the back of the list and then sort it (list_push_back then list_sort ).
+
+
+       PRIORITY SCHEDULING
+       ===================
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+No additional struct declaration for priority scheduling.
+
+---- RATIONALE ----
+
+>> B7: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+To implement priority scheduling, a thread with a high priority is yielded first through the <if (t->priority > thread_get_priority()) thread_yield();> statement in thread_create.
+In addition, unlike the algorithms in original code, list_push_back (&ready_list, &cur->elem) in thread_unblock or thread_yield, 
+the list_insert_ordered (&ready_list, &cur->elem, &priority_less_func, NULL) statement was newly written so that it is sorted according to high priority.
+Here, priority_less_func is newly implemented as list_less_func to sort the list. Unlike sleeping_less_func described above, priority_less_func is implemented to be sorted in descending order.
+
+        ADVANCED SCHEDULER
+        ==================
+
+---- DATA STRUCTURES ----
+
+>> C1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+---- ALGORITHMS ----
+
+>> C2: Suppose threads A, B, and C have nice values 0, 1, and 2.  Each
+>> has a recent_cpu value of 0.  Fill in the table below showing the
+>> scheduling decision and the priority and recent_cpu values for each
+>> thread after each given number of timer ticks:
+
+timer  recent_cpu    priority   thread
+ticks   A   B   C   A   B   C   to run
+-----  --  --  --  --  --  --   ------
+ 0
+ 4
+ 8
+12
+16
+20
+24
+28
+32
+36
+
+>> C3: Did any ambiguities in the scheduler specification make values
+>> in the table uncertain?  If so, what rule did you use to resolve
+>> them?  Does this match the behavior of your scheduler?
+
+>> C4: How is the way you divided the cost of scheduling between code
+>> inside and outside interrupt context likely to affect performance?
+
+---- RATIONALE ----
+
+>> C5: Briefly critique your design, pointing out advantages and
+>> disadvantages in your design choices.  If you were to have extra
+>> time to work on this part of the project, how might you choose to
+>> refine or improve your design?
+
+>> C6: The assignment explains arithmetic for fixed-point math in
+>> detail, but it leaves it open to you to implement it.  Why did you
+>> decide to implement it the way you did?  If you created an
+>> abstraction layer for fixed-point math, that is, an abstract data
+>> type and/or a set of functions or macros to manipulate fixed-point
+>> numbers, why did you do so?  If not, why not?
+
+         SURVEY QUESTIONS
+         ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?
